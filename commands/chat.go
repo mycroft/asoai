@@ -10,8 +10,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	maxTokens *int
+)
+
 func NewChatCommand() *cobra.Command {
-	return &cobra.Command{
+	chatCommand := cobra.Command{
 		Use:   "chat",
 		Short: "interact with chatgpt",
 		Args:  cobra.MinimumNArgs(1),
@@ -19,6 +23,10 @@ func NewChatCommand() *cobra.Command {
 			chat(args[0])
 		},
 	}
+
+	maxTokens = chatCommand.Flags().Int("max-tokens", 0, "Maximum number of tokens to return")
+
+	return &chatCommand
 }
 
 func chat(input string) {
@@ -61,6 +69,10 @@ func chat(input string) {
 	req := openai.ChatCompletionRequest{
 		Model:    session.Model,
 		Messages: messages,
+	}
+
+	if *maxTokens != 0 {
+		req.MaxTokens = *maxTokens
 	}
 
 	req.Messages = append(req.Messages, openai.ChatCompletionMessage{
