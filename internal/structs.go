@@ -12,13 +12,20 @@ type Session struct {
 	Messages []Message `json:"message"`
 }
 
-func NewSession() Session {
+func NewSession(model, prompt string) Session {
+	if model == "" {
+		model = openai.GPT3Dot5Turbo
+	}
+	if prompt == "" {
+		prompt = "You are chatgpt, a large language model trained by OpenAI, based on the GPT-4 architecture."
+	}
+
 	return Session{
-		Model: openai.GPT3Dot5Turbo,
+		Model: model,
 		Messages: []Message{
 			{
 				Role:    openai.ChatMessageRoleSystem,
-				Content: "You are chatgpt, a large language model trained by OpenAI, based on the GPT-4 architecture.",
+				Content: prompt,
 			},
 		},
 	}

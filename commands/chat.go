@@ -18,6 +18,7 @@ func NewChatCommand() *cobra.Command {
 	chatCommand := cobra.Command{
 		Use:   "chat",
 		Short: "interact with chatgpt",
+		Long:  "query the OpenAI conversation API with current saved discussion in session",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			chat(args[0])
@@ -44,7 +45,7 @@ func chat(input string) {
 
 	if currentSession == "" {
 		// create a new default session
-		currentSession, err = SessionCreate(true)
+		currentSession, err = SessionCreate(*model, *prompt, true)
 		if err != nil {
 			fmt.Printf("could not create a new default session: %v\n", err)
 			os.Exit(1)

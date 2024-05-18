@@ -10,6 +10,11 @@ import (
 	"git.mkz.me/mycroft/asoai/internal"
 )
 
+var (
+	model  *string
+	prompt *string
+)
+
 func NewSessionCommand() *cobra.Command {
 	sessionCommand := cobra.Command{
 		Use:   "session",
@@ -20,12 +25,12 @@ func NewSessionCommand() *cobra.Command {
 		},
 	}
 
-	sessionCommand.AddCommand(&cobra.Command{
+	newSessionCommand := cobra.Command{
 		Use:   "create",
 		Short: "create a new session",
 
 		Run: func(cmd *cobra.Command, args []string) {
-			sessionUuid, err := SessionCreate(false)
+			sessionUuid, err := SessionCreate(*model, *prompt, false)
 			if err != nil {
 				fmt.Printf("could not create a new session: %s\n", err)
 				os.Exit(1)
@@ -33,7 +38,11 @@ func NewSessionCommand() *cobra.Command {
 
 			fmt.Println(sessionUuid)
 		},
-	})
+	}
+
+	model = newSessionCommand.Flags().String("model", "gpt-3.5-turbo", "Model (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
+	prompt = newSessionCommand.Flags().String("system-prompt", "", "Initial system prompt")
+	sessionCommand.AddCommand(&newSessionCommand)
 
 	sessionCommand.AddCommand(&cobra.Command{
 		Use:   "dump",
@@ -71,9 +80,9 @@ func NewSessionCommand() *cobra.Command {
 	return &sessionCommand
 }
 
-func SessionCreate(setDefaultSession bool) (string, error) {
+func SessionCreate(model, prompt string, setDefaultSession bool) (string, error) {
 	uuid := uuid.New()
-	if err := internal.DbCreateSession(uuid.String(), internal.NewSession()); err != nil {
+	if err := internal.DbCreateSession(uuid.String(), internal.NewSession(model, prompt)); err != nil {
 		return "", err
 	}
 
