@@ -10,13 +10,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var ChatCmd = &cobra.Command{
-	Use:   "chat",
-	Short: "interact with chatgpt",
-	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		chat(args[0])
-	},
+func NewChatCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "chat",
+		Short: "interact with chatgpt",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			chat(args[0])
+		},
+	}
 }
 
 func chat(input string) {

@@ -10,61 +10,65 @@ import (
 	"git.mkz.me/mycroft/asoai/internal"
 )
 
-var SessionCmd = &cobra.Command{
-	Use:   "session",
-	Short: "handle sessions",
-	Long:  "sessions are used to get context about chats with the AI",
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Usage()
-	},
-}
+func NewSessionCommand() *cobra.Command {
+	sessionCommand := cobra.Command{
+		Use:   "session",
+		Short: "handle sessions",
+		Long:  "sessions are used to get context about chats with the AI",
+		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Usage()
+		},
+	}
 
-var SessionCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "create a new session",
+	sessionCommand.AddCommand(&cobra.Command{
+		Use:   "create",
+		Short: "create a new session",
 
-	Run: func(cmd *cobra.Command, args []string) {
-		sessionUuid, err := SessionCreate(false)
-		if err != nil {
-			fmt.Printf("could not create a new session: %s\n", err)
-			os.Exit(1)
-		}
+		Run: func(cmd *cobra.Command, args []string) {
+			sessionUuid, err := SessionCreate(false)
+			if err != nil {
+				fmt.Printf("could not create a new session: %s\n", err)
+				os.Exit(1)
+			}
 
-		fmt.Println(sessionUuid)
-	},
-}
+			fmt.Println(sessionUuid)
+		},
+	})
 
-var SessionDumpCmd = &cobra.Command{
-	Use:   "dump",
-	Short: "dump current session",
-	Run: func(cmd *cobra.Command, args []string) {
-		SessionDump()
-	},
-}
+	sessionCommand.AddCommand(&cobra.Command{
+		Use:   "dump",
+		Short: "dump current session",
+		Run: func(cmd *cobra.Command, args []string) {
+			SessionDump()
+		},
+	})
 
-var SessionListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list existing sessions",
-	Run: func(cmd *cobra.Command, args []string) {
-		SessionList()
-	},
-}
+	sessionCommand.AddCommand(&cobra.Command{
+		Use:   "list",
+		Short: "list existing sessions",
+		Run: func(cmd *cobra.Command, args []string) {
+			SessionList()
+		},
+	})
 
-var SessionGetCurrentCmd = &cobra.Command{
-	Use:   "get-current",
-	Short: "returns current session uuid",
-	Run: func(cmd *cobra.Command, args []string) {
-		SessionGetCurrent()
-	},
-}
+	sessionCommand.AddCommand(&cobra.Command{
+		Use:   "get-current",
+		Short: "returns current session uuid",
+		Run: func(cmd *cobra.Command, args []string) {
+			SessionGetCurrent()
+		},
+	})
 
-var SessionSetCurrentCmd = &cobra.Command{
-	Use:   "set-current",
-	Short: "set current session uuid",
-	Args:  cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		SessionSetCurrent(args[0])
-	},
+	sessionCommand.AddCommand(&cobra.Command{
+		Use:   "set-current",
+		Short: "set current session uuid",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			SessionSetCurrent(args[0])
+		},
+	})
+
+	return &sessionCommand
 }
 
 func SessionCreate(setDefaultSession bool) (string, error) {

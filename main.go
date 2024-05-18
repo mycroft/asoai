@@ -19,14 +19,8 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(commands.ChatCmd)
-	rootCmd.AddCommand(commands.SessionCmd)
-
-	commands.SessionCmd.AddCommand(commands.SessionCreateCmd)
-	commands.SessionCmd.AddCommand(commands.SessionDumpCmd)
-	commands.SessionCmd.AddCommand(commands.SessionListCmd)
-	commands.SessionCmd.AddCommand(commands.SessionGetCurrentCmd)
-	commands.SessionCmd.AddCommand(commands.SessionSetCurrentCmd)
+	rootCmd.AddCommand(commands.NewChatCommand())
+	rootCmd.AddCommand(commands.NewSessionCommand())
 }
 
 func main() {
