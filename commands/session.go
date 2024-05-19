@@ -13,6 +13,10 @@ import (
 var (
 	model  *string
 	prompt *string
+
+	configDescription *string
+	configModel       *string
+	configPrompt      *string
 )
 
 func NewSessionCommand() *cobra.Command {
@@ -77,14 +81,19 @@ func NewSessionCommand() *cobra.Command {
 		},
 	})
 
-	sessionCommand.AddCommand(&cobra.Command{
-		Use:   "set-description",
-		Short: "set a description for current session",
-		Args:  cobra.MinimumNArgs(1),
+	configCommand := cobra.Command{
+		Use:   "config",
+		Short: "configure the current session",
 		Run: func(cmd *cobra.Command, args []string) {
-			SessionSetDescription(args[0])
+			SessionConfigure()
 		},
-	})
+	}
+
+	configDescription = configCommand.Flags().String("description", "", "Set a description")
+	configPrompt = configCommand.Flags().String("prompt", "", "Set a prompt (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
+	configModel = configCommand.Flags().String("model", "", "Set a model")
+
+	sessionCommand.AddCommand(&configCommand)
 
 	return &sessionCommand
 }
@@ -169,7 +178,7 @@ func SessionDump() {
 	}
 }
 
-func SessionSetDescription(description string) error {
+func SessionConfigure() error {
 	currentSessionUuid, err := internal.GetCurrentSession()
 	if err != nil {
 		fmt.Printf("could not get current session: %v\n", err)
@@ -182,7 +191,17 @@ func SessionSetDescription(description string) error {
 		os.Exit(1)
 	}
 
-	session.Description = description
+	if *configDescription != "" {
+		session.Description = *configDescription
+	}
+
+	if *configModel != "" {
+		session.Model = *configModel
+	}
+
+	if *configPrompt != "" {
+		session.Messages[0].Content = *configPrompt
+	}
 
 	err = internal.DbSetSession(currentSessionUuid, session)
 	if err != nil {
