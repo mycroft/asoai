@@ -8,8 +8,9 @@ type Message struct {
 }
 
 type Session struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"message"`
+	Description string    `json:"description"`
+	Model       string    `json:"model"`
+	Messages    []Message `json:"message"`
 }
 
 func NewSession(model, prompt string) Session {

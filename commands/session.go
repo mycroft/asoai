@@ -77,6 +77,15 @@ func NewSessionCommand() *cobra.Command {
 		},
 	})
 
+	sessionCommand.AddCommand(&cobra.Command{
+		Use:   "set-description",
+		Short: "set a description for current session",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			SessionSetDescription(args[0])
+		},
+	})
+
 	return &sessionCommand
 }
 
@@ -103,7 +112,19 @@ func SessionList() {
 	}
 
 	for _, sessionUuid := range sessions {
-		fmt.Println(sessionUuid)
+		session, err := internal.DbGetSession(sessionUuid)
+		if err != nil {
+			fmt.Printf("could not get session %s: %v\n", sessionUuid, err)
+			os.Exit(1)
+		}
+
+		output := sessionUuid
+
+		if session.Description != "" {
+			output = fmt.Sprintf("%s - %s", sessionUuid, session.Description)
+		}
+
+		fmt.Println(output)
 	}
 }
 
@@ -135,9 +156,39 @@ func SessionDump() {
 	}
 
 	fmt.Printf("Current session: %s\n", currentSessionUuid)
-	fmt.Printf("Model: %s\n\n", session.Model)
+	fmt.Printf("Model: %s\n", session.Model)
+
+	if session.Description != "" {
+		fmt.Printf("Description: %s\n", session.Description)
+	}
+
+	fmt.Println()
 
 	for _, message := range session.Messages {
 		fmt.Printf("%s> %s\n", message.Role, message.Content)
 	}
+}
+
+func SessionSetDescription(description string) error {
+	currentSessionUuid, err := internal.GetCurrentSession()
+	if err != nil {
+		fmt.Printf("could not get current session: %v\n", err)
+		os.Exit(1)
+	}
+
+	session, err := internal.DbGetSession(currentSessionUuid)
+	if err != nil {
+		fmt.Printf("could not retrieve session details: %v\n", err)
+		os.Exit(1)
+	}
+
+	session.Description = description
+
+	err = internal.DbSetSession(currentSessionUuid, session)
+	if err != nil {
+		fmt.Printf("could not save session: %v\n", err)
+		os.Exit(1)
+	}
+
+	return nil
 }
