@@ -123,3 +123,21 @@ func DbSetCurrentSession(session string) error {
 
 	return err
 }
+
+func DbDeleteSession(session string) error {
+	db, err := OpenDB()
+	if err != nil {
+		return fmt.Errorf("could not open database: %v", err)
+	}
+	defer db.Close()
+
+	err = db.Update(func(tx *buntdb.Tx) error {
+		_, err = tx.Delete(fmt.Sprintf("session:%s", session))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return err
+}

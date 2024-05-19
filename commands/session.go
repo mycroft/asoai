@@ -17,6 +17,7 @@ var (
 	configDescription *string
 	configModel       *string
 	configPrompt      *string
+	configRename      *string
 )
 
 func NewSessionCommand() *cobra.Command {
@@ -92,6 +93,7 @@ func NewSessionCommand() *cobra.Command {
 	configDescription = configCommand.Flags().String("description", "", "Set a description")
 	configPrompt = configCommand.Flags().String("prompt", "", "Set a prompt (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
 	configModel = configCommand.Flags().String("model", "", "Set a model")
+	configRename = configCommand.Flags().String("rename", "", "Rename session")
 
 	sessionCommand.AddCommand(&configCommand)
 
@@ -203,11 +205,22 @@ func SessionConfigure() error {
 		session.Messages[0].Content = *configPrompt
 	}
 
+	if *configRename != "" {
+		if err = internal.DbDeleteSession(currentSessionUuid); err != nil {
+			fmt.Printf("could not rename session: %v\n", err)
+			os.Exit(1)
+		}
+
+		currentSessionUuid = *configRename
+	}
+
 	err = internal.DbSetSession(currentSessionUuid, session)
 	if err != nil {
 		fmt.Printf("could not save session: %v\n", err)
 		os.Exit(1)
 	}
+
+	internal.SetCurrentSession(currentSessionUuid)
 
 	return nil
 }
