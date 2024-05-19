@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -15,6 +16,7 @@ import (
 
 var (
 	maxTokens *int
+	useStream *bool
 )
 
 func NewChatCommand() *cobra.Command {
@@ -29,6 +31,7 @@ func NewChatCommand() *cobra.Command {
 	}
 
 	maxTokens = chatCommand.Flags().Int("max-tokens", 0, "Maximum number of tokens to return")
+	useStream = chatCommand.Flags().Bool("stream", false, "Stream response from API")
 
 	return &chatCommand
 }
@@ -114,6 +117,8 @@ func chat(input string) {
 		req.MaxTokens = *maxTokens
 	}
 
+	req.Stream = *useStream
+
 	req.Messages = append(req.Messages, openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: input,
@@ -127,18 +132,56 @@ func chat(input string) {
 	db.SetSession(currentSessionName, currentSession)
 
 	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
-	resp, err := client.CreateChatCompletion(context.Background(), req)
-	if err != nil {
-		fmt.Printf("ChatCompletion error: %v\n", err)
-		os.Exit(1)
+
+	returnedRole := ""
+	returnedContent := ""
+
+	if !*useStream {
+		resp, err := client.CreateChatCompletion(context.Background(), req)
+		if err != nil {
+			fmt.Printf("ChatCompletion error: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("%s\n", resp.Choices[0].Message.Content)
+
+		currentSession.Messages = append(currentSession.Messages, session.Message{
+			Role:    resp.Choices[0].Message.Role,
+			Content: resp.Choices[0].Message.Content,
+		})
+
+	} else {
+		resp, err := client.CreateChatCompletionStream(context.Background(), req)
+		if err != nil {
+			fmt.Printf("ChatCompletionStream error: %v\n", err)
+		}
+		defer resp.Close()
+
+		for {
+			content, err := resp.Recv()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				fmt.Printf("error while streaming response...")
+				os.Exit(1)
+			}
+
+			if content.Choices[0].Delta.Role != "" {
+				returnedRole = content.Choices[0].Delta.Role
+				continue
+			}
+
+			returnedContent += content.Choices[0].Delta.Content
+
+			fmt.Print(content.Choices[0].Delta.Content)
+		}
+
+		currentSession.Messages = append(currentSession.Messages, session.Message{
+			Role:    returnedRole,
+			Content: returnedContent,
+		})
+
 	}
-
-	fmt.Printf("%s\n", resp.Choices[0].Message.Content)
-
-	currentSession.Messages = append(currentSession.Messages, session.Message{
-		Role:    resp.Choices[0].Message.Role,
-		Content: resp.Choices[0].Message.Content,
-	})
 
 	db.SetSession(currentSessionName, currentSession)
 }
