@@ -158,6 +158,7 @@ func chat(args []string) {
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("user> ")
 			input, err = reader.ReadString('\n')
+			input = strings.TrimSpace(input)
 			if err != nil || len(input) == 0 {
 				break
 			}
