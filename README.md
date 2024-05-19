@@ -2,6 +2,12 @@
 
 Simple but efficient OpenAI client.
 
+It features:
+- basic cli chat, with optional streaming mode
+- a REPL/interactive mode
+- configurable sessions management
+- history database
+
 ## Building & running
 
 ```sh
@@ -14,9 +20,10 @@ Usage:
   asoai [command]
 
 Available Commands:
-  chat
+  chat        interact with chatgpt
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
+  models      list models
   session     handle sessions
 
 Flags:
