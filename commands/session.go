@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	model  *string
-	prompt *string
+	createName   *string
+	createModel  *string
+	createPrompt *string
 
 	configDescription *string
 	configModel       *string
@@ -35,7 +36,7 @@ func NewSessionCommand() *cobra.Command {
 		Short: "create a new session",
 
 		Run: func(cmd *cobra.Command, args []string) {
-			sessionUuid, err := SessionCreate(*model, *prompt, false)
+			sessionUuid, err := SessionCreate(*createName, *createModel, *createPrompt, false)
 			if err != nil {
 				fmt.Printf("could not create a new session: %s\n", err)
 				os.Exit(1)
@@ -45,8 +46,9 @@ func NewSessionCommand() *cobra.Command {
 		},
 	}
 
-	model = newSessionCommand.Flags().String("model", "gpt-3.5-turbo", "Model (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
-	prompt = newSessionCommand.Flags().String("system-prompt", "", "Initial system prompt")
+	createName = newSessionCommand.Flags().String("name", "", "Session's name")
+	createModel = newSessionCommand.Flags().String("model", "gpt-3.5-turbo", "Model (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
+	createPrompt = newSessionCommand.Flags().String("system-prompt", "", "Initial system prompt")
 	sessionCommand.AddCommand(&newSessionCommand)
 
 	sessionCommand.AddCommand(&cobra.Command{
@@ -100,23 +102,26 @@ func NewSessionCommand() *cobra.Command {
 	return &sessionCommand
 }
 
-func SessionCreate(model, prompt string, setDefaultSession bool) (string, error) {
-	uuid := uuid.New()
+func SessionCreate(name, model, prompt string, setDefaultSession bool) (string, error) {
+	sessionName := uuid.New().String()
+	if name != "" {
+		sessionName = name
+	}
 
 	db := OpenDatabase()
-	session := session.NewSession(model, prompt)
+	createdSession := session.NewSession(model, prompt)
 
-	if err := db.SetSession(uuid.String(), session); err != nil {
+	if err := db.SetSession(sessionName, createdSession); err != nil {
 		return "", err
 	}
 
 	if setDefaultSession {
-		if err := db.SetCurrentSession(uuid.String()); err != nil {
+		if err := db.SetCurrentSession(sessionName); err != nil {
 			return "", err
 		}
 	}
 
-	return uuid.String(), nil
+	return sessionName, nil
 }
 
 func SessionList() {

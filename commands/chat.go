@@ -48,7 +48,7 @@ func chat(input string) {
 
 	if currentSessionName == "" {
 		// create a new default session
-		currentSessionName, err = SessionCreate(*model, *prompt, true)
+		currentSessionName, err = SessionCreate(*createName, *createModel, *createPrompt, true)
 		if err != nil {
 			fmt.Printf("could not create a new default session: %v\n", err)
 			os.Exit(1)

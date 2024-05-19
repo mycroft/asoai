@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/tidwall/buntdb"
@@ -16,11 +15,9 @@ type DB struct {
 	handle *buntdb.DB
 }
 
-// Opens the database located in the given directory
-func Open(directory string) (*DB, error) {
-	dbPath := path.Join(directory, "data.db")
-
-	db, err := buntdb.Open(dbPath)
+// Opens the database located in the given file path
+func Open(filePath string) (*DB, error) {
+	db, err := buntdb.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("could not open database: %v", err)
 	}
