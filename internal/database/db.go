@@ -51,8 +51,8 @@ func (db *DB) SetSession(name string, session session.Session) error {
 	}
 
 	return db.handle.Update(func(tx *buntdb.Tx) error {
-		tx.Set(fmt.Sprintf("session:%s", name), string(encoded), nil)
-		return nil
+		_, _, err = tx.Set(fmt.Sprintf("session:%s", name), string(encoded), nil)
+		return err
 	})
 }
 

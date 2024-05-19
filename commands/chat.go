@@ -18,6 +18,7 @@ var (
 	maxTokens  *int
 	useStream  *bool
 	newSession *bool
+	replMode   *bool
 )
 
 func NewChatCommand() *cobra.Command {
@@ -33,6 +34,7 @@ func NewChatCommand() *cobra.Command {
 	maxTokens = chatCommand.Flags().Int("max-tokens", 0, "Maximum number of tokens to return")
 	useStream = chatCommand.Flags().Bool("stream", false, "Stream response from API")
 	newSession = chatCommand.Flags().Bool("new-session", false, "Force creating a new session")
+	replMode = chatCommand.Flags().Bool("repl", false, "Enable Repeat Evaluate Print Loop mode")
 
 	return &chatCommand
 }
@@ -48,6 +50,8 @@ func chat(args []string) {
 
 	input := strings.Join(args, " ")
 
+	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
+
 	db := OpenDatabase()
 
 	currentSessionName, err := db.GetCurrentSession()
@@ -58,7 +62,7 @@ func chat(args []string) {
 
 	if currentSessionName == "" || *newSession {
 		// create a new default session
-		currentSessionName, currentSession, err = SessionCreate(*createName, *createModel, *createPrompt, true)
+		currentSessionName, currentSession, err = SessionCreate(db, *createName, *createModel, *createPrompt, true)
 		if err != nil {
 			fmt.Printf("could not create a new session: %v\n", err)
 			os.Exit(1)
@@ -97,95 +101,111 @@ func chat(args []string) {
 		input = stdinMessage
 	}
 
-	if len(input) == 0 {
+	if len(input) == 0 && !*replMode {
 		fmt.Println("no input; exiting")
 		os.Exit(1)
 	}
 
-	messages := []openai.ChatCompletionMessage{}
+	for {
+		messages := []openai.ChatCompletionMessage{}
 
-	for _, message := range currentSession.Messages {
-		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    message.Role,
-			Content: message.Content,
-		})
-	}
-
-	req := openai.ChatCompletionRequest{
-		Model:    currentSession.Model,
-		Messages: messages,
-	}
-
-	if *maxTokens != 0 {
-		req.MaxTokens = *maxTokens
-	}
-
-	req.Stream = *useStream
-
-	req.Messages = append(req.Messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
-		Content: input,
-	})
-
-	currentSession.Messages = append(currentSession.Messages, session.Message{
-		Role:    openai.ChatMessageRoleUser,
-		Content: input,
-	})
-
-	db.SetSession(currentSessionName, currentSession)
-
-	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
-
-	returnedRole := ""
-	returnedContent := ""
-
-	if !*useStream {
-		resp, err := client.CreateChatCompletion(context.Background(), req)
-		if err != nil {
-			fmt.Printf("ChatCompletion error: %v\n", err)
-			os.Exit(1)
+		for _, message := range currentSession.Messages {
+			messages = append(messages, openai.ChatCompletionMessage{
+				Role:    message.Role,
+				Content: message.Content,
+			})
 		}
 
-		fmt.Printf("%s\n", resp.Choices[0].Message.Content)
+		req := openai.ChatCompletionRequest{
+			Model:    currentSession.Model,
+			Messages: messages,
+		}
+
+		if *maxTokens != 0 {
+			req.MaxTokens = *maxTokens
+		}
+
+		req.Stream = *useStream
+
+		if *replMode {
+			// Read input
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("user> ")
+			input, err = reader.ReadString('\n')
+			if err != nil || len(input) == 0 {
+				break
+			}
+		}
+
+		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleUser,
+			Content: input,
+		})
 
 		currentSession.Messages = append(currentSession.Messages, session.Message{
-			Role:    resp.Choices[0].Message.Role,
-			Content: resp.Choices[0].Message.Content,
+			Role:    openai.ChatMessageRoleUser,
+			Content: input,
 		})
 
-	} else {
-		resp, err := client.CreateChatCompletionStream(context.Background(), req)
-		if err != nil {
-			fmt.Printf("ChatCompletionStream error: %v\n", err)
-		}
-		defer resp.Close()
+		// Save session, as we added an input
+		db.SetSession(currentSessionName, currentSession)
 
-		for {
-			content, err := resp.Recv()
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				fmt.Printf("error while streaming response...")
+		returnedRole := ""
+		returnedContent := ""
+
+		if !*useStream {
+			resp, err := client.CreateChatCompletion(context.Background(), req)
+			if err != nil {
+				fmt.Printf("ChatCompletion error: %v\n", err)
 				os.Exit(1)
 			}
 
-			if content.Choices[0].Delta.Role != "" {
-				returnedRole = content.Choices[0].Delta.Role
-				continue
+			fmt.Printf("assistant> %s\n", resp.Choices[0].Message.Content)
+
+			currentSession.Messages = append(currentSession.Messages, session.Message{
+				Role:    resp.Choices[0].Message.Role,
+				Content: resp.Choices[0].Message.Content,
+			})
+
+		} else {
+			resp, err := client.CreateChatCompletionStream(context.Background(), req)
+			if err != nil {
+				fmt.Printf("ChatCompletionStream error: %v\n", err)
+			}
+			defer resp.Close()
+
+			fmt.Printf("assistant> ")
+
+			for {
+				content, err := resp.Recv()
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					fmt.Printf("error while streaming response...")
+					os.Exit(1)
+				}
+
+				if content.Choices[0].Delta.Role != "" {
+					returnedRole = content.Choices[0].Delta.Role
+					continue
+				}
+
+				returnedContent += content.Choices[0].Delta.Content
+
+				fmt.Print(content.Choices[0].Delta.Content)
 			}
 
-			returnedContent += content.Choices[0].Delta.Content
+			fmt.Println()
 
-			fmt.Print(content.Choices[0].Delta.Content)
+			currentSession.Messages = append(currentSession.Messages, session.Message{
+				Role:    returnedRole,
+				Content: returnedContent,
+			})
 		}
 
-		fmt.Println()
-
-		currentSession.Messages = append(currentSession.Messages, session.Message{
-			Role:    returnedRole,
-			Content: returnedContent,
-		})
-
+		if !*replMode {
+			break
+		}
 	}
 
 	db.SetSession(currentSessionName, currentSession)

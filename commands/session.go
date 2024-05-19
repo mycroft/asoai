@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
+	"git.mkz.me/mycroft/asoai/internal/database"
 	"git.mkz.me/mycroft/asoai/internal/session"
 )
 
@@ -36,7 +37,7 @@ func NewSessionCommand() *cobra.Command {
 		Short: "create a new session",
 
 		Run: func(cmd *cobra.Command, args []string) {
-			sessionUuid, _, err := SessionCreate(*createName, *createModel, *createPrompt, false)
+			sessionUuid, _, err := SessionCreate(nil, *createName, *createModel, *createPrompt, false)
 			if err != nil {
 				fmt.Printf("could not create a new session: %s\n", err)
 				os.Exit(1)
@@ -102,13 +103,16 @@ func NewSessionCommand() *cobra.Command {
 	return &sessionCommand
 }
 
-func SessionCreate(name, model, prompt string, setDefaultSession bool) (string, session.Session, error) {
+func SessionCreate(db *database.DB, name, model, prompt string, setDefaultSession bool) (string, session.Session, error) {
 	sessionName := uuid.New().String()
 	if name != "" {
 		sessionName = name
 	}
 
-	db := OpenDatabase()
+	if db == nil {
+		db = OpenDatabase()
+	}
+
 	createdSession := session.NewSession(model, prompt)
 
 	if err := db.SetSession(sessionName, createdSession); err != nil {
