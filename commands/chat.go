@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	maxTokens *int
-	useStream *bool
+	maxTokens  *int
+	useStream  *bool
+	newSession *bool
 )
 
 func NewChatCommand() *cobra.Command {
@@ -31,11 +32,14 @@ func NewChatCommand() *cobra.Command {
 
 	maxTokens = chatCommand.Flags().Int("max-tokens", 0, "Maximum number of tokens to return")
 	useStream = chatCommand.Flags().Bool("stream", false, "Stream response from API")
+	newSession = chatCommand.Flags().Bool("new-session", false, "Force creating a new session")
 
 	return &chatCommand
 }
 
 func chat(args []string) {
+	var currentSession session.Session
+
 	envVar := os.Getenv("OPENAI_API_KEY")
 	if envVar == "" {
 		fmt.Printf("could not find OPENAI_API_KEY")
@@ -52,26 +56,19 @@ func chat(args []string) {
 		os.Exit(1)
 	}
 
-	if currentSessionName == "" {
+	if currentSessionName == "" || *newSession {
 		// create a new default session
-		currentSessionName, err = SessionCreate(*createName, *createModel, *createPrompt, true)
+		currentSessionName, currentSession, err = SessionCreate(*createName, *createModel, *createPrompt, true)
 		if err != nil {
 			fmt.Printf("could not create a new session: %v\n", err)
 			os.Exit(1)
 		}
-
-		// set session as default
-		err = SessionSetCurrent(currentSessionName)
+	} else {
+		currentSession, err = db.GetSession(currentSessionName)
 		if err != nil {
-			fmt.Printf("could not set new session as default: %v\n", err)
+			fmt.Printf("could not get %s session's details: %v\n", currentSessionName, err)
 			os.Exit(1)
 		}
-	}
-
-	currentSession, err := db.GetSession(currentSessionName)
-	if err != nil {
-		fmt.Printf("could not get session's details: %v\n", err)
-		os.Exit(1)
 	}
 
 	// Prior dealing with the API, finding out if there is some stdin

@@ -36,7 +36,7 @@ func NewSessionCommand() *cobra.Command {
 		Short: "create a new session",
 
 		Run: func(cmd *cobra.Command, args []string) {
-			sessionUuid, err := SessionCreate(*createName, *createModel, *createPrompt, false)
+			sessionUuid, _, err := SessionCreate(*createName, *createModel, *createPrompt, false)
 			if err != nil {
 				fmt.Printf("could not create a new session: %s\n", err)
 				os.Exit(1)
@@ -102,7 +102,7 @@ func NewSessionCommand() *cobra.Command {
 	return &sessionCommand
 }
 
-func SessionCreate(name, model, prompt string, setDefaultSession bool) (string, error) {
+func SessionCreate(name, model, prompt string, setDefaultSession bool) (string, session.Session, error) {
 	sessionName := uuid.New().String()
 	if name != "" {
 		sessionName = name
@@ -112,16 +112,16 @@ func SessionCreate(name, model, prompt string, setDefaultSession bool) (string, 
 	createdSession := session.NewSession(model, prompt)
 
 	if err := db.SetSession(sessionName, createdSession); err != nil {
-		return "", err
+		return "", session.Session{}, err
 	}
 
 	if setDefaultSession {
 		if err := db.SetCurrentSession(sessionName); err != nil {
-			return "", err
+			return "", session.Session{}, err
 		}
 	}
 
-	return sessionName, nil
+	return sessionName, createdSession, nil
 }
 
 func SessionList() {

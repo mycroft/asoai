@@ -98,7 +98,7 @@ func (db *DB) ListSessions() ([]string, error) {
 // Set current session in database
 func (db *DB) SetCurrentSession(name string) error {
 	err := db.handle.Update(func(tx *buntdb.Tx) error {
-		_, _, err := tx.Set("current", name, nil)
+		_, _, err := tx.Set("current", fmt.Sprintf("session:%s", name), nil)
 		return err
 	})
 
@@ -118,7 +118,12 @@ func (db *DB) GetCurrentSession() (string, error) {
 		return nil
 	})
 
-	return name, err
+	// Not having "session:" has a prefix should not be possible
+	if !strings.HasPrefix(name, "session:") {
+		return name, err
+	}
+
+	return strings.Split(name, ":")[1], err
 }
 
 // Delete given session in database
