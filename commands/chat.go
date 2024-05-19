@@ -25,7 +25,7 @@ func NewChatCommand() *cobra.Command {
 		Short: "interact with chatgpt",
 		Long:  "query the OpenAI conversation API with current saved discussion in session",
 		Run: func(cmd *cobra.Command, args []string) {
-			chat(args[0])
+			chat(args)
 		},
 	}
 
@@ -35,12 +35,14 @@ func NewChatCommand() *cobra.Command {
 	return &chatCommand
 }
 
-func chat(input string) {
+func chat(args []string) {
 	envVar := os.Getenv("OPENAI_API_KEY")
 	if envVar == "" {
 		fmt.Printf("could not find OPENAI_API_KEY")
 		os.Exit(1)
 	}
+
+	input := strings.Join(args, " ")
 
 	db := OpenDatabase()
 
