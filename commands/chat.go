@@ -24,7 +24,6 @@ func NewChatCommand() *cobra.Command {
 		Use:   "chat",
 		Short: "interact with chatgpt",
 		Long:  "query the OpenAI conversation API with current saved discussion in session",
-		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			chat(args[0])
 		},
@@ -97,6 +96,11 @@ func chat(input string) {
 		}
 	} else {
 		input = stdinMessage
+	}
+
+	if len(input) == 0 {
+		fmt.Println("no input; exiting")
+		os.Exit(1)
 	}
 
 	messages := []openai.ChatCompletionMessage{}
