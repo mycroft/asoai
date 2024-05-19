@@ -1,9 +1,11 @@
 package commands
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cobra"
@@ -66,6 +68,32 @@ func chat(input string) {
 	if err != nil {
 		fmt.Printf("could not get session's details: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Prior dealing with the API, finding out if there is some stdin
+	stdinData := []string{}
+	stdinMessage := ""
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			stdinData = append(stdinData, scanner.Text())
+		}
+	}
+
+	if len(stdinData) > 0 {
+		stdinData = append([]string{"```"}, stdinData...)
+		stdinData = append(stdinData, "```")
+
+		stdinMessage = strings.Join(stdinData, "\n")
+	}
+
+	if len(input) > 0 {
+		if len(stdinMessage) > 0 {
+			input = strings.Join([]string{input, stdinMessage}, "\n")
+		}
+	} else {
+		input = stdinMessage
 	}
 
 	messages := []openai.ChatCompletionMessage{}
