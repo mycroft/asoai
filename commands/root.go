@@ -22,6 +22,7 @@ var RootCmd = &cobra.Command{
 func InitCommands() {
 	RootCmd.AddCommand(NewChatCommand())
 	RootCmd.AddCommand(NewSessionCommand())
+	RootCmd.AddCommand(NewModelsCommand())
 
 	dbPath = RootCmd.PersistentFlags().String("db-path", "", "database file path")
 }
