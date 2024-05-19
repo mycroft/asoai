@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
-	"git.mkz.me/mycroft/asoai/internal"
+	"git.mkz.me/mycroft/asoai/internal/session"
 )
 
 var (
@@ -102,12 +102,16 @@ func NewSessionCommand() *cobra.Command {
 
 func SessionCreate(model, prompt string, setDefaultSession bool) (string, error) {
 	uuid := uuid.New()
-	if err := internal.DbCreateSession(uuid.String(), internal.NewSession(model, prompt)); err != nil {
+
+	db := OpenDatabase()
+	session := session.NewSession(model, prompt)
+
+	if err := db.SetSession(uuid.String(), session); err != nil {
 		return "", err
 	}
 
 	if setDefaultSession {
-		if err := internal.SetCurrentSession(uuid.String()); err != nil {
+		if err := db.SetCurrentSession(uuid.String()); err != nil {
 			return "", err
 		}
 	}
@@ -116,23 +120,25 @@ func SessionCreate(model, prompt string, setDefaultSession bool) (string, error)
 }
 
 func SessionList() {
-	sessions, err := internal.DbListSessions()
+	db := OpenDatabase()
+
+	sessions, err := db.ListSessions()
 	if err != nil {
 		fmt.Printf("could not list sessions: %v\n", err)
 		os.Exit(1)
 	}
 
-	for _, sessionUuid := range sessions {
-		session, err := internal.DbGetSession(sessionUuid)
+	for _, name := range sessions {
+		session, err := db.GetSession(name)
 		if err != nil {
-			fmt.Printf("could not get session %s: %v\n", sessionUuid, err)
+			fmt.Printf("could not get session %s: %v\n", name, err)
 			os.Exit(1)
 		}
 
-		output := sessionUuid
+		output := name
 
 		if session.Description != "" {
-			output = fmt.Sprintf("%s - %s", sessionUuid, session.Description)
+			output = fmt.Sprintf("%s - %s", name, session.Description)
 		}
 
 		fmt.Println(output)
@@ -140,33 +146,37 @@ func SessionList() {
 }
 
 func SessionGetCurrent() {
-	currentSessionUuid, err := internal.GetCurrentSession()
+	db := OpenDatabase()
+
+	currentSessionName, err := db.GetCurrentSession()
 	if err != nil {
 		fmt.Printf("could not get current session: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println(currentSessionUuid)
+	fmt.Println(currentSessionName)
 }
 
 func SessionSetCurrent(session string) error {
-	return internal.SetCurrentSession(session)
+	return OpenDatabase().SetCurrentSession(session)
 }
 
 func SessionDump() {
-	currentSessionUuid, err := internal.GetCurrentSession()
+	db := OpenDatabase()
+
+	currentSessionName, err := db.GetCurrentSession()
 	if err != nil {
 		fmt.Printf("could not get current session: %v\n", err)
 		os.Exit(1)
 	}
 
-	session, err := internal.DbGetSession(currentSessionUuid)
+	session, err := db.GetSession(currentSessionName)
 	if err != nil {
 		fmt.Printf("could not retrieve session details: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Current session: %s\n", currentSessionUuid)
+	fmt.Printf("Current session: %s\n", currentSessionName)
 	fmt.Printf("Model: %s\n", session.Model)
 
 	if session.Description != "" {
@@ -181,13 +191,15 @@ func SessionDump() {
 }
 
 func SessionConfigure() error {
-	currentSessionUuid, err := internal.GetCurrentSession()
+	db := OpenDatabase()
+
+	currentSessionName, err := db.GetCurrentSession()
 	if err != nil {
 		fmt.Printf("could not get current session: %v\n", err)
 		os.Exit(1)
 	}
 
-	session, err := internal.DbGetSession(currentSessionUuid)
+	session, err := db.GetSession(currentSessionName)
 	if err != nil {
 		fmt.Printf("could not retrieve session details: %v\n", err)
 		os.Exit(1)
@@ -206,21 +218,21 @@ func SessionConfigure() error {
 	}
 
 	if *configRename != "" {
-		if err = internal.DbDeleteSession(currentSessionUuid); err != nil {
+		if err = db.DeleteSession(currentSessionName); err != nil {
 			fmt.Printf("could not rename session: %v\n", err)
 			os.Exit(1)
 		}
 
-		currentSessionUuid = *configRename
+		currentSessionName = *configRename
 	}
 
-	err = internal.DbSetSession(currentSessionUuid, session)
+	err = db.SetSession(currentSessionName, session)
 	if err != nil {
 		fmt.Printf("could not save session: %v\n", err)
 		os.Exit(1)
 	}
 
-	internal.SetCurrentSession(currentSessionUuid)
+	db.SetCurrentSession(currentSessionName)
 
 	return nil
 }

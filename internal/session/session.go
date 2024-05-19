@@ -1,4 +1,4 @@
-package internal
+package session
 
 import "github.com/sashabaranov/go-openai"
 

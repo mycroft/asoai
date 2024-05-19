@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"git.mkz.me/mycroft/asoai/internal"
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cobra"
+
+	"git.mkz.me/mycroft/asoai/internal/session"
 )
 
 var (
@@ -37,22 +38,24 @@ func chat(input string) {
 		os.Exit(1)
 	}
 
-	currentSession, err := internal.DbGetCurrentSession()
+	db := OpenDatabase()
+
+	currentSessionName, err := db.GetCurrentSession()
 	if err != nil {
 		fmt.Printf("could not get current session: %v\n", err)
 		os.Exit(1)
 	}
 
-	if currentSession == "" {
+	if currentSessionName == "" {
 		// create a new default session
-		currentSession, err = SessionCreate(*model, *prompt, true)
+		currentSessionName, err = SessionCreate(*model, *prompt, true)
 		if err != nil {
 			fmt.Printf("could not create a new default session: %v\n", err)
 			os.Exit(1)
 		}
 	}
 
-	session, err := internal.DbGetSession(currentSession)
+	currentSession, err := db.GetSession(currentSessionName)
 	if err != nil {
 		fmt.Printf("could not get session's details: %v\n", err)
 		os.Exit(1)
@@ -60,7 +63,7 @@ func chat(input string) {
 
 	messages := []openai.ChatCompletionMessage{}
 
-	for _, message := range session.Messages {
+	for _, message := range currentSession.Messages {
 		messages = append(messages, openai.ChatCompletionMessage{
 			Role:    message.Role,
 			Content: message.Content,
@@ -68,7 +71,7 @@ func chat(input string) {
 	}
 
 	req := openai.ChatCompletionRequest{
-		Model:    session.Model,
+		Model:    currentSession.Model,
 		Messages: messages,
 	}
 
@@ -81,12 +84,12 @@ func chat(input string) {
 		Content: input,
 	})
 
-	session.Messages = append(session.Messages, internal.Message{
+	currentSession.Messages = append(currentSession.Messages, session.Message{
 		Role:    openai.ChatMessageRoleUser,
 		Content: input,
 	})
 
-	internal.DbSetSession(currentSession, session)
+	db.SetSession(currentSessionName, currentSession)
 
 	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 	resp, err := client.CreateChatCompletion(context.Background(), req)
@@ -97,10 +100,10 @@ func chat(input string) {
 
 	fmt.Printf("%s\n", resp.Choices[0].Message.Content)
 
-	session.Messages = append(session.Messages, internal.Message{
+	currentSession.Messages = append(currentSession.Messages, session.Message{
 		Role:    resp.Choices[0].Message.Role,
 		Content: resp.Choices[0].Message.Content,
 	})
 
-	internal.DbSetSession(currentSession, session)
+	db.SetSession(currentSessionName, currentSession)
 }
