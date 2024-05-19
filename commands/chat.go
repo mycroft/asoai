@@ -176,6 +176,8 @@ func chat(input string) {
 			fmt.Print(content.Choices[0].Delta.Content)
 		}
 
+		fmt.Println()
+
 		currentSession.Messages = append(currentSession.Messages, session.Message{
 			Role:    returnedRole,
 			Content: returnedContent,
