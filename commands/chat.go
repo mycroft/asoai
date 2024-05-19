@@ -19,6 +19,11 @@ var (
 	useStream  *bool
 	newSession *bool
 	replMode   *bool
+
+	chatModel       *string
+	chatName        *string
+	chatDescription *string
+	chatPrompt      *string
 )
 
 func NewChatCommand() *cobra.Command {
@@ -35,6 +40,11 @@ func NewChatCommand() *cobra.Command {
 	useStream = chatCommand.Flags().Bool("stream", false, "Stream response from API")
 	newSession = chatCommand.Flags().Bool("new-session", false, "Force creating a new session")
 	replMode = chatCommand.Flags().Bool("repl", false, "Enable Repeat Evaluate Print Loop mode")
+
+	chatName = chatCommand.Flags().String("name", "", "Session's name (if created, else ignored)")
+	chatDescription = chatCommand.Flags().String("description", "", "Session's description (if created, else ignored)")
+	chatModel = chatCommand.Flags().String("model", "gpt-3.5-turbo", "Model (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
+	chatPrompt = chatCommand.Flags().String("system-prompt", "", "Set system prompt")
 
 	return &chatCommand
 }
@@ -62,10 +72,14 @@ func chat(args []string) {
 
 	if currentSessionName == "" || *newSession {
 		// create a new default session
-		currentSessionName, currentSession, err = SessionCreate(db, *createName, *createModel, *createPrompt, true)
+		currentSessionName, currentSession, err = SessionCreate(db, *chatName, *chatModel, *chatPrompt, true)
 		if err != nil {
 			fmt.Printf("could not create a new session: %v\n", err)
 			os.Exit(1)
+		}
+
+		if *chatDescription != "" {
+			currentSession.Description = *chatDescription
 		}
 	} else {
 		currentSession, err = db.GetSession(currentSessionName)
@@ -116,8 +130,20 @@ func chat(args []string) {
 			})
 		}
 
+		// overwrite system prompt, if needed
+		if *chatPrompt != "" {
+			messages[0].Content = *chatPrompt
+		}
+
+		model := currentSession.Model
+
+		if *chatModel != "" {
+			// model was changed but session is not updated.
+			model = *chatModel
+		}
+
 		req := openai.ChatCompletionRequest{
-			Model:    currentSession.Model,
+			Model:    model,
 			Messages: messages,
 		}
 
