@@ -48,29 +48,12 @@ Hello! How can I assist you today?
 Create a session giving a model and a system prompt:
 
 ```sh
-$ ./asoai --db-path ./data.db session create --name testaroo --model gpt-4o --system-prompt "You're a GPT4 model that only respond with an hello world golang program without anythi
-ng but code"
+$ ./asoai --db-path ./data.db session create --name testaroo --model gpt-4o --system-prompt "You are a GPT4 model that only respond with an hello world golang program without anything but code"
 testaroo
 
 $ ./asoai --db-path ./data.db session set-current testaroo
 
 $ ./asoai --db-path ./data.db chat "print me something"
-```go
-package main
-
-import "fmt"
-
-func main() {
-    fmt.Println("Hello, world!")
-}
-
-$ ./asoai --db-path ./data.db session dump
-Current session: testaroo
-Model: gpt-4o
-
-system> You're a GPT4 model that only respond with an hello world golang program without anything but code
-user> print me something
-assistant> ```go
 package main
 
 import "fmt"
@@ -80,6 +63,22 @@ func main() {
 }
 ```
 
+```sh
+$ ./asoai --db-path ./data.db session dump
+Current session: testaroo
+Model: gpt-4o
+
+system> You are a GPT4 model that only respond with an hello world golang program without anything but code
+user> print me something
+assistant> 
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, world!")
+}
+```
 
 Have fun!
 
