@@ -1,30 +1,27 @@
 package commands
 
-import (
-	"fmt"
+import "github.com/spf13/cobra"
 
-	"git.mkz.me/mycroft/asoai/internal/database"
-	"github.com/adrg/xdg"
-)
-
-// Opens a database located in current directory or given directory from
-// parameters. If an error happens, it will fail and exit the process.
-func OpenDatabase() *database.DB {
-	if *dbPath != "" {
-		return database.OpenOrFail(*dbPath)
-	}
-	return database.OpenOrFail(GetDefaultDbFilePath())
-}
-
-// Get database default directory; On error, defaults to current working directory
-// and prints the error.
-func GetDefaultDbFilePath() string {
-	filePath, err := xdg.DataFile("asoai/data.db")
-
-	if err != nil {
-		fmt.Printf("could not find a suitable location for datbase: %v; falling back to working directory.\n", err)
-		return "."
+func NewDatabaseCommand() *cobra.Command {
+	databaseCommand := cobra.Command{
+		Use:   "database",
+		Short: "database management functions",
+		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Usage()
+		},
 	}
 
-	return filePath
+	databaseShrinkCommand := cobra.Command{
+		Use:   "shrink",
+		Short: "shrink/compact database",
+		Run: func(cmd *cobra.Command, args []string) {
+			db := OpenDatabase()
+			db.Shrink()
+			defer db.Close()
+		},
+	}
+
+	databaseCommand.AddCommand(&databaseShrinkCommand)
+
+	return &databaseCommand
 }

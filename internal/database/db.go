@@ -136,6 +136,20 @@ func (db *DB) DeleteSession(name string) error {
 	return err
 }
 
-func (db *DB) Close() {
-	db.handle.Close()
+// Shrink/compact database
+func (db *DB) Shrink() error {
+	err := db.handle.Shrink()
+	if err != nil {
+		return fmt.Errorf("could not shrink database: %v", err)
+	}
+	return err
+}
+
+// Close the database handle
+func (db *DB) Close() error {
+	err := db.handle.Close()
+	if err != nil {
+		return fmt.Errorf("could not close database: %v", err)
+	}
+	return err
 }
