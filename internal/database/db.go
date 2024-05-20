@@ -135,3 +135,7 @@ func (db *DB) DeleteSession(name string) error {
 
 	return err
 }
+
+func (db *DB) Close() {
+	db.handle.Close()
+}

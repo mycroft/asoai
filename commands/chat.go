@@ -63,6 +63,7 @@ func chat(args []string) {
 	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 
 	db := OpenDatabase()
+	defer db.Close()
 
 	currentSessionName, err := db.GetCurrentSession()
 	if err != nil {
