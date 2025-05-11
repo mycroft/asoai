@@ -26,6 +26,7 @@ var (
 	chatName        *string
 	chatDescription *string
 	chatPrompt      *string
+	chatOutput      *string
 )
 
 func NewChatCommand() *cobra.Command {
@@ -47,6 +48,7 @@ func NewChatCommand() *cobra.Command {
 	chatDescription = chatCommand.Flags().String("description", "", "Session's description (if created, else ignored)")
 	chatModel = chatCommand.Flags().String("model", "gpt-3.5-turbo", "Model (gpt-3.5-turbo, gpt-4-turbo, gpt-4o)")
 	chatPrompt = chatCommand.Flags().String("system-prompt", "", "Set system prompt")
+	chatOutput = chatCommand.Flags().String("output", "", "Output file path (if not set, output to stdout)")
 
 	return &chatCommand
 }
@@ -204,6 +206,20 @@ func chat(args []string) {
 				Content: resp.Choices[0].Message.Content,
 			})
 
+			if *chatOutput != "" {
+				f, err := os.OpenFile(*chatOutput, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+				if err != nil {
+					fmt.Printf("could not create output file: %v\n", err)
+					os.Exit(1)
+				}
+				_, err = f.WriteString(resp.Choices[0].Message.Content)
+				if err != nil {
+					fmt.Printf("could not write to output file: %v\n", err)
+					os.Exit(1)
+				}
+
+				f.Close()
+			}
 		} else {
 			resp, err := client.CreateChatCompletionStream(context.Background(), req)
 			if err != nil {
@@ -238,6 +254,21 @@ func chat(args []string) {
 				Role:    returnedRole,
 				Content: returnedContent,
 			})
+
+			if *chatOutput != "" {
+				f, err := os.OpenFile(*chatOutput, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+				if err != nil {
+					fmt.Printf("could not create output file: %v\n", err)
+					os.Exit(1)
+				}
+				_, err = f.WriteString(returnedContent)
+				if err != nil {
+					fmt.Printf("could not write to output file: %v\n", err)
+					os.Exit(1)
+				}
+
+				f.Close()
+			}
 		}
 
 		if !*replMode {
