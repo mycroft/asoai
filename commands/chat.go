@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	asoai_chat "git.mkz.me/mycroft/asoai/internal/chat"
+	"git.mkz.me/mycroft/asoai/internal/database"
 	"git.mkz.me/mycroft/asoai/internal/session"
 )
 
@@ -63,7 +64,7 @@ func chat(args []string) {
 
 	client := openai.NewClient(os.Getenv("OPENAI_API_KEY"))
 
-	db := OpenDatabase()
+	db := database.OpenDatabase(*dbPath)
 	defer db.Close()
 
 	currentSessionName, err := db.GetCurrentSession()

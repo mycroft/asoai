@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/adrg/xdg"
 	"github.com/tidwall/buntdb"
 
 	"git.mkz.me/mycroft/asoai/internal/session"
@@ -13,6 +14,28 @@ import (
 
 type DB struct {
 	handle *buntdb.DB
+}
+
+// Opens a database located in current directory or given directory from
+// parameters. If an error happens, it will fail and exit the process.
+func OpenDatabase(dbPath string) *DB {
+	if dbPath != "" {
+		return OpenOrFail(dbPath)
+	}
+	return OpenOrFail(GetDefaultDbFilePath())
+}
+
+// Get database default directory; On error, defaults to current working directory
+// and prints the error.
+func GetDefaultDbFilePath() string {
+	filePath, err := xdg.DataFile("asoai/data.db")
+
+	if err != nil {
+		fmt.Printf("could not find a suitable location for datbase: %v; falling back to working directory.\n", err)
+		return "."
+	}
+
+	return filePath
 }
 
 // Opens the database located in the given file path

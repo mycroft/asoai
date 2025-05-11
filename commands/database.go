@@ -1,6 +1,9 @@
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"git.mkz.me/mycroft/asoai/internal/database"
+	"github.com/spf13/cobra"
+)
 
 func NewDatabaseCommand() *cobra.Command {
 	databaseCommand := cobra.Command{
@@ -15,7 +18,7 @@ func NewDatabaseCommand() *cobra.Command {
 		Use:   "shrink",
 		Short: "shrink/compact database",
 		Run: func(cmd *cobra.Command, args []string) {
-			db := OpenDatabase()
+			db := database.OpenDatabase(*dbPath)
 			db.Shrink()
 			defer db.Close()
 		},

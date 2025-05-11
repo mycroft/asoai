@@ -110,7 +110,7 @@ func SessionCreate(db *database.DB, name, model, prompt string, setDefaultSessio
 	}
 
 	if db == nil {
-		db = OpenDatabase()
+		db := database.OpenDatabase(*dbPath)
 		defer db.Close()
 	}
 
@@ -130,7 +130,7 @@ func SessionCreate(db *database.DB, name, model, prompt string, setDefaultSessio
 }
 
 func SessionList() {
-	db := OpenDatabase()
+	db := database.OpenDatabase(*dbPath)
 	defer db.Close()
 
 	sessions, err := db.ListSessions()
@@ -157,7 +157,7 @@ func SessionList() {
 }
 
 func SessionGetCurrent() {
-	db := OpenDatabase()
+	db := database.OpenDatabase(*dbPath)
 	defer db.Close()
 
 	currentSessionName, err := db.GetCurrentSession()
@@ -170,14 +170,14 @@ func SessionGetCurrent() {
 }
 
 func SessionSetCurrent(session string) error {
-	db := OpenDatabase()
+	db := database.OpenDatabase(*dbPath)
 	defer db.Close()
 
 	return db.SetCurrentSession(session)
 }
 
 func SessionDump() {
-	db := OpenDatabase()
+	db := database.OpenDatabase(*dbPath)
 	defer db.Close()
 
 	currentSessionName, err := db.GetCurrentSession()
@@ -207,7 +207,7 @@ func SessionDump() {
 }
 
 func SessionConfigure() error {
-	db := OpenDatabase()
+	db := database.OpenDatabase(*dbPath)
 	defer db.Close()
 
 	currentSessionName, err := db.GetCurrentSession()
