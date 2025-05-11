@@ -11,6 +11,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 	"github.com/spf13/cobra"
 
+	asoai_chat "git.mkz.me/mycroft/asoai/internal/chat"
 	"git.mkz.me/mycroft/asoai/internal/session"
 )
 
@@ -163,6 +164,13 @@ func chat(args []string) {
 			if err != nil || len(input) == 0 {
 				break
 			}
+		}
+
+		// Patch input to handle inserting files
+		input, err = asoai_chat.PatchInput(input)
+		if err != nil {
+			fmt.Printf("error while patching input: %v\n", err)
+			os.Exit(1)
 		}
 
 		req.Messages = append(req.Messages, openai.ChatCompletionMessage{
